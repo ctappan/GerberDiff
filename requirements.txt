@@ -1,0 +1,6 @@
+cairocffi==0.6
+cffi==1.15.0
+fpdf2==2.4.5
+-e git+https://github.com/ctappan/pcb-tools.git@72257258edf16cbda691483ef1fa722192ac0d38#egg=pcb_tools
+Pillow==8.4.0
+pycparser==2.20
