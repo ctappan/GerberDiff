@@ -5,29 +5,24 @@
 # directory called Gerber/
 
 
-import json
-import os
-import glob
 import zipfile
-import shutil
 import fnmatch
+import argparse
+import sys
+
 from fpdf import FPDF
 from io import BytesIO
-from PIL import Image, ImageFont, ImageDraw
+from PIL import Image
 from gerber import load_layer_data
-
-
 from gerber.render import RenderSettings
 from gerber.render import theme
 from gerber.render.cairo_backend import GerberCairoContext
 
-#PCBLayer(, layer_class=)
-
 
 class GerberDiff():
     old_color = RenderSettings(color=theme.COLORS['blue'], alpha=0.5)
-    new_color = RenderSettings(color=theme.COLORS['red'], alpha=0.5)
-    bg_color = RenderSettings(color=theme.COLORS['white'], alpha=0)
+    new_color = RenderSettings(color=theme.COLORS['red'], alpha=0.4)
+    bg_color = RenderSettings(color=theme.COLORS['black'], alpha=1)
 
     def __init__(self, old_archive, new_archive):
         self.layer_images = {}
@@ -59,7 +54,7 @@ class GerberDiff():
         max_w = 0
         max_h = 0
         for layer in image_list:
-            with Image.open(self.layer_images[image_list[0]]) as im:
+            with Image.open(self.layer_images[layer]) as im:
                 width, height = im.size
                 max_w = [max_w, width][width > max_w]
                 max_h = [max_h, height][height > max_h]
@@ -67,7 +62,10 @@ class GerberDiff():
 
         for layer in image_list:
             pdf.add_page()
+            pdf.set_text_color(255,255,255)
+            pdf.set_font("Helvetica", "B", 32,)
             pdf.image(self.layer_images[layer], 0, 0)
+            pdf.cell(0,0, str(layer))\
 
         pdf.output(output_filename, "F")
 
@@ -95,8 +93,21 @@ class GerberDiff():
                         bgsettings=self.bg_color)
         return BytesIO(ctx.dump_str())
 
-if __name__ == "__main__":
-    gd = GerberDiff("2019-09-05_PRIME-MAIN-LOGIC-BOARD_FabFiles.zip",
-                "2019-11-16_PRIME-MAIN-LOGIC-BOARD_103347RevC_103423RevB.zip")
+def parse_args(args):
+    parser = argparse.ArgumentParser(description="Generate a Gerber diff from two .zip files")
+    parser.add_argument("zip1")
+    parser.add_argument("zip2")
+    parser.add_argument("-n", "--name", type=str,
+                        help="A file name for .pdf output")
+    parser.add_argument("-l", "--list", type=str, nargs="+",
+                        help="A sequence of layer extensions to plot in order")
+    return parser.parse_args(args)
+
+def main():
+    args = parse_args(sys.argv[1:])
+    gd = GerberDiff(args.zip1, args.zip2)
     gd.executeDiff()
-    gd.makePDF()
+    gd.makePDF(image_list = args.list, output_filename=args.name)
+
+if __name__ == "__main__":
+    main()
